@@ -1,7 +1,8 @@
 name: Release
 
 # Push a tag like v1.2.3 (matching the version in Cargo.toml) to publish a release with the
-# Fedora RPMs and a prebuilt Linux executable. Can also be run by hand to (re)build an existing tag.
+# Fedora RPMs and a prebuilt Linux executable. Can also be run by hand to (re)build an existing
+# tag: gh workflow run release.yml -f tag=v1.2.3
 on:
   push:
     tags: ["v*"]
