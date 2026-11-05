@@ -1,0 +1,32 @@
+[package]
+name = "autoframe"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.87"
+description = "Auto-framing virtual camera for PipeWire: keeps you smoothly framed on any webcam"
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+repository = "https://github.com/ah-/autoframe"
+keywords = ["pipewire", "webcam", "auto-framing", "face-detection", "virtual-camera"]
+categories = ["multimedia::video", "command-line-utilities"]
+
+[features]
+default = ["avx2"]
+# Use libfacedetection's AVX2/FMA kernels on x86_64 (checked at startup). Disable for older CPUs.
+avx2 = []
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+fast_image_resize = "6"
+libc = "0.2.191"
+pipewire = { version = "0.10", features = ["v0_3_44"] }
+yuv = "0.8"
+zune-jpeg = "0.5"
+
+[build-dependencies]
+cc = "1.11.0"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+panic = "abort"

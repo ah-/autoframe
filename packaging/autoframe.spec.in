@@ -1,0 +1,65 @@
+# Built by packaging/make-srpm.sh, which fills in @VERSION@/@RELEASE@ and bundles the Rust
+# dependencies (Source1) so the build needs no network access (COPR, mock).
+
+Name:           autoframe
+Version:        @VERSION@
+Release:        @RELEASE@%{?dist}
+Summary:        Auto-framing virtual camera for PipeWire
+
+# autoframe: MIT OR Apache-2.0; bundled YuNet (libfacedetection): BSD-3-Clause.
+# Bundled Rust crates: see LICENSE.dependencies in the package.
+License:        (MIT OR Apache-2.0) AND BSD-3-Clause AND MIT AND Apache-2.0 AND Unicode-3.0 AND (MIT OR Apache-2.0 OR Zlib) AND (Unlicense OR MIT)
+URL:            https://github.com/ah-/autoframe
+Source0:        %{name}-%{version}.tar.gz
+Source1:        %{name}-%{version}-vendor.tar.xz
+
+ExclusiveArch:  x86_64 aarch64
+
+BuildRequires:  cargo-rpm-macros >= 24
+BuildRequires:  gcc-c++
+BuildRequires:  clang-devel
+BuildRequires:  pkgconfig(libpipewire-0.3)
+BuildRequires:  systemd-rpm-macros
+
+Requires:       pipewire
+Provides:       bundled(libfacedetection)
+
+%description
+autoframe adds a virtual camera to PipeWire that keeps you framed: it finds your face with the
+YuNet detector, pans and zooms with smooth, calm camera moves, and brightens a dark or backlit
+face. The real camera is only opened while an app is using the virtual camera.
+
+%prep
+%autosetup -n %{name}-%{version} -a1
+%cargo_prep -v vendor
+
+%build
+%cargo_build
+%{cargo_license_summary}
+%{cargo_license} > LICENSE.dependencies
+%cargo_vendor_manifest
+
+%install
+install -Dpm 0755 target/rpm/%{name} %{buildroot}%{_bindir}/%{name}
+install -Dpm 0644 autoframe.service %{buildroot}%{_userunitdir}/autoframe.service
+sed -i 's|^ExecStart=.*|ExecStart=%{_bindir}/%{name}|; /^# /d' %{buildroot}%{_userunitdir}/autoframe.service
+
+%check
+%cargo_test
+
+%post
+%systemd_user_post autoframe.service
+
+%preun
+%systemd_user_preun autoframe.service
+
+%files
+%license LICENSE-MIT LICENSE-APACHE LICENSE.dependencies cargo-vendor.txt
+%license third_party/libfacedetection/LICENSE
+%doc README.md docs/design.md
+%{_bindir}/%{name}
+%{_userunitdir}/autoframe.service
+
+%changelog
+* @DATE@ autoframe maintainers - @VERSION@-@RELEASE@
+- Automated build from @COMMIT@

@@ -1,0 +1,3 @@
+[submodule "third_party/libfacedetection"]
+	path = third_party/libfacedetection
+	url = https://github.com/ShiqiYu/libfacedetection.git
