@@ -3,16 +3,24 @@ name: RPM
 on:
   push:
     branches: [main, master]
-    tags: ["v*"]
   pull_request:
   workflow_dispatch:
+  # Used by release.yml to build the RPMs for a tag.
+  workflow_call:
+    inputs:
+      ref:
+        description: Git ref to build
+        type: string
+        required: false
+
+concurrency:
+  group: rpm-${{ inputs.ref || github.ref }}
+  cancel-in-progress: ${{ !startsWith(inputs.ref || github.ref, 'refs/tags/') }}
 
 jobs:
   rpm:
     runs-on: ubuntu-latest
     container: fedora:latest
-    permissions:
-      contents: write # to attach RPMs to releases
     steps:
       - name: Install build dependencies
         run: >
@@ -20,6 +28,7 @@ jobs:
           pipewire-devel systemd-rpm-macros tar gzip xz
       - uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.ref || github.ref }}
           submodules: true
           fetch-depth: 0 # tags decide release vs snapshot versioning
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
@@ -30,9 +39,8 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: rpms
-          path: dist/**/*.rpm
-      - name: Attach to release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: dist/**/*.rpm
+          # The package and its source RPM; debuginfo/debugsource aren't useful to users.
+          path: |
+            dist/*.src.rpm
+            dist/x86_64/autoframe-[0-9]*.x86_64.rpm
+          if-no-files-found: error

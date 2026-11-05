@@ -1,0 +1,93 @@
+name: Release
+
+# Push a tag like v1.2.3 (matching the version in Cargo.toml) to publish a release with the
+# Fedora RPMs and a prebuilt Linux executable. Can also be run by hand to (re)build an existing tag.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to (re)build, e.g. v1.0.0
+        required: true
+
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - name: Tag matches Cargo.toml version
+        run: |
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n1)
+          if [ "$TAG" != "v$version" ]; then
+            echo "::error::Tag $TAG does not match Cargo.toml version $version (expected v$version)"
+            exit 1
+          fi
+
+  rpm:
+    needs: check
+    uses: ./.github/workflows/rpm.yml
+    with:
+      ref: refs/tags/${{ inputs.tag || github.ref_name }}
+
+  binary:
+    needs: check
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+          submodules: true
+      - name: Install build dependencies
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libpipewire-0.3-dev libclang-dev clang pkg-config
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo build --release --locked
+      - name: Check runtime requirements
+        run: |
+          # The README promises glibc 2.35 (Ubuntu 22.04, Debian 12) or newer.
+          ldd target/release/autoframe
+          glibc=$(objdump -T target/release/autoframe | grep -o 'GLIBC_[0-9.]*' | sort -uV | tail -n1)
+          echo "Needs $glibc"
+          if [ "$(printf '%s\n' GLIBC_2.35 "$glibc" | sort -V | tail -n1)" != GLIBC_2.35 ]; then
+            echo "::error::Binary needs $glibc, newer than the documented glibc 2.35"
+            exit 1
+          fi
+      - name: Package
+        run: |
+          # A single self-contained executable; it only links system libraries every PipeWire
+          # desktop has (libpipewire, libstdc++, glibc).
+          name="autoframe-${TAG#v}-x86_64-linux"
+          mkdir -p out
+          cp target/release/autoframe "out/$name"
+          (cd out && sha256sum "$name" > "$name.sha256")
+      - uses: actions/upload-artifact@v4
+        with:
+          name: binary
+          path: out/*
+          if-no-files-found: error
+
+  publish:
+    needs: [rpm, binary]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - run: find dist -type f | sort
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            dist/**/*.rpm
+            dist/autoframe-*-x86_64-linux
+            dist/*.sha256

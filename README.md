@@ -58,6 +58,16 @@ systemctl --user enable --now autoframe   # optional: start at login
 
 RPMs are also attached to each [GitHub release](https://github.com/ah-/autoframe/releases).
 
+### Prebuilt binary (other distributions)
+
+Each [GitHub release](https://github.com/ah-/autoframe/releases) has a single x86-64 Linux
+executable. It runs on distributions with glibc 2.35 or newer (e.g. Ubuntu 22.04+, Debian 12+,
+Arch, openSUSE) and uses PipeWire from your system.
+
+```sh
+install -Dm755 autoframe-*-x86_64-linux ~/.local/bin/autoframe
+```
+
 ### From source
 
 Install the build dependencies:

@@ -30,3 +30,4 @@ cc = "1.11.0"
 lto = "thin"
 codegen-units = 1
 panic = "abort"
+strip = true

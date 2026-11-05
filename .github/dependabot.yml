@@ -1,0 +1,14 @@
+# Weekly PRs for Rust dependency updates (grouped, so one PR per week) and GitHub Actions.
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      rust-dependencies:
+        patterns: ["*"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
