@@ -742,6 +742,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             *pw::keys::MEDIA_ROLE => "Camera",
             *pw::keys::NODE_NAME => format!("{}.capture", opt.name),
             *pw::keys::TARGET_OBJECT => cam.name.as_str(),
+            // Never fall back to the default video source if the camera can't be linked: the
+            // default is usually our own virtual camera, which would loop black frames into itself.
+            "node.dont-fallback" => "true",
+            // ...and ignore "move stream" overrides in the default metadata, which WirePlumber
+            // otherwise consults on every rescan (and which made the defined target vanish).
+            "node.dont-move" => "true",
         },
     )?;
     let out = StreamRc::new(
