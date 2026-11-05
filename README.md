@@ -45,6 +45,21 @@ move.
 
 ## Installation
 
+### Fedora
+
+Packages are built for current Fedora releases (x86_64 and aarch64) on
+[COPR](https://copr.fedorainfracloud.org/coprs/ahahah/autoframe/):
+
+```sh
+sudo dnf copr enable ahahah/autoframe
+sudo dnf install autoframe
+systemctl --user enable --now autoframe   # optional: start at login
+```
+
+RPMs are also attached to each [GitHub release](https://github.com/ah-/autoframe/releases).
+
+### From source
+
 Install the build dependencies:
 
 ```sh
@@ -79,6 +94,9 @@ camera on while an app is using the virtual camera.
 
 ### Start automatically at login
 
+The Fedora package ships a systemd user service; just run
+`systemctl --user enable --now autoframe`. When building from source, install it first:
+
 ```sh
 cp autoframe.service ~/.config/systemd/user/
 systemctl --user daemon-reload
@@ -86,9 +104,17 @@ systemctl --user enable --now autoframe
 ```
 
 Logs: `journalctl --user -u autoframe -f`. The service restarts autoframe if PipeWire restarts
-or the camera isn't available yet. To change options, edit the `ExecStart=` line in
-`~/.config/systemd/user/autoframe.service`, then run
-`systemctl --user daemon-reload && systemctl --user restart autoframe`.
+or the camera isn't available yet. To change options, run `systemctl --user edit autoframe` and
+override the command:
+
+```ini
+[Service]
+ExecStart=
+ExecStart=/usr/bin/autoframe --face-scale 2.0
+```
+
+(use `%h/.local/bin/autoframe` when built from source), then
+`systemctl --user restart autoframe`.
 
 ## Using the virtual camera
 
